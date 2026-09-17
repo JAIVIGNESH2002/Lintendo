@@ -52,6 +52,8 @@ $hostIncident = Join-Path $root "scenarios/linux/silent-service/host/incident-ch
 
 Assert-Contains $instance "bash -s <"
 Assert-Contains $instance "--env `"LINTENDO_INSTANCE_NAME="
+Assert-Contains $instance "lintendo_wait_instance_ip"
+Assert-Contains $instance "ip -4 -o addr show dev"
 Assert-Contains $lifecycle "LINTENDO_INSTANCE_IP="
 Assert-Contains $lifecycle "host/verify\.sh"
 Assert-Contains $quest "python3"
@@ -65,4 +67,3 @@ Assert-NotContains $lifecycle "search"
 Assert-NotContains $lifecycle "leaderboard"
 
 Write-Host "Static tests passed."
-

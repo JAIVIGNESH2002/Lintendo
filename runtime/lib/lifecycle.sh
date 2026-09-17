@@ -77,8 +77,8 @@ lintendo_run() {
     lintendo_cleanup_after_init_failure "$instance"
     return 1
   fi
-  ip="$(lintendo_instance_ip "$instance")" || {
-    printf '✗ Could not determine instance IP\n' >&2
+  ip="$(lintendo_wait_instance_ip "$instance")" || {
+    printf '✗ Instance did not acquire a usable IPv4 address\n' >&2
     lintendo_cleanup_after_init_failure "$instance"
     return 1
   }
@@ -191,4 +191,3 @@ lintendo_destroy() {
   lintendo_clear_state
   printf 'Destroyed environment: %s\n' "$instance_name"
 }
-

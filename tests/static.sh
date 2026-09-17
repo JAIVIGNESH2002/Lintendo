@@ -29,6 +29,8 @@ done
 
 grep -q 'bash -s <' runtime/lib/instance.sh
 grep -q 'LINTENDO_INSTANCE_NAME=' runtime/lib/instance.sh
+grep -q 'lintendo_wait_instance_ip' runtime/lib/instance.sh
+grep -q 'ip -4 -o addr show dev' runtime/lib/instance.sh
 grep -q 'LINTENDO_INSTANCE_IP=' runtime/lib/lifecycle.sh
 grep -q 'host/verify\.sh' runtime/lib/lifecycle.sh
 grep -q 'python3' scenarios/linux/silent-service/quest.yaml
@@ -42,4 +44,3 @@ if grep -Eq 'search|leaderboard|registry|account|frontend|database' runtime/lib/
 fi
 
 printf 'Static tests passed.\n'
-
