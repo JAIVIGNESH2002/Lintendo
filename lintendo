@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+LINTENDO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# shellcheck source=runtime/lib/scenario.sh
+. "$LINTENDO_ROOT/runtime/lib/scenario.sh"
+# shellcheck source=runtime/lib/instance.sh
+. "$LINTENDO_ROOT/runtime/lib/instance.sh"
+# shellcheck source=runtime/lib/lifecycle.sh
+. "$LINTENDO_ROOT/runtime/lib/lifecycle.sh"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  ./lintendo run <scenario-id>
+  ./lintendo verify
+  ./lintendo status
+  ./lintendo destroy
+
+V0 supports one active quest at a time.
+EOF
+}
+
+main() {
+  local command="${1:-}"
+  case "$command" in
+    run)
+      if [ "$#" -ne 2 ]; then
+        usage
+        exit 2
+      fi
+      lintendo_run "$2"
+      ;;
+    verify)
+      if [ "$#" -ne 1 ]; then
+        usage
+        exit 2
+      fi
+      lintendo_verify
+      ;;
+    status)
+      if [ "$#" -ne 1 ]; then
+        usage
+        exit 2
+      fi
+      lintendo_status
+      ;;
+    destroy)
+      if [ "$#" -ne 1 ]; then
+        usage
+        exit 2
+      fi
+      lintendo_destroy
+      ;;
+    -h|--help|help|"")
+      usage
+      ;;
+    *)
+      printf 'Unknown command: %s\n\n' "$command" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+}
+
+main "$@"
+

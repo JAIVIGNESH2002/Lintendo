@@ -1,0 +1,27 @@
+id: linux/silent-service
+name: The Silent Service
+image: images:debian/13
+dependencies:
+  packages:
+    - python3
+mission: |
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          THE SILENT SERVICE
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Black Mesa monitoring reports that its internal
+  status endpoint has become unavailable.
+
+  The endpoint was operational earlier today.
+
+  MISSION
+
+  Investigate the system and restore external access
+  to the status service.
+
+  CONSTRAINTS
+
+  Do not replace the supplied application.
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
