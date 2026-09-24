@@ -24,6 +24,8 @@ function Assert-NotContains($Path, $Pattern) {
 
 $required = @(
   "lintendo",
+  "lintendo.cmd",
+  "controller/lintendo.ps1",
   "runtime/lib/instance.sh",
   "runtime/lib/scenario.sh",
   "runtime/lib/lifecycle.sh",
@@ -70,7 +72,8 @@ $required = @(
   "tests/integration/forbidden-config-smoke.sh",
   "tests/integration/restless-worker-smoke.sh",
   "tests/integration/unreachable-database-smoke.sh",
-  "tests/capabilities.sh"
+  "tests/capabilities.sh",
+  "tests/controller.ps1"
 )
 
 foreach ($item in $required) {
@@ -150,12 +153,22 @@ Assert-Contains $dockerVerify "fresh database-backed operation succeeds"
 
 $readme = Join-Path $root "README.md"
 $cli = Join-Path $root "lintendo"
+$controller = Join-Path $root "controller/lintendo.ps1"
+$cmdLauncher = Join-Path $root "lintendo.cmd"
 Assert-Contains $readme "\./lintendo play linux/silent-service"
+Assert-Contains $readme "lintendo.cmd machine add phoenix"
+Assert-Contains $readme "%APPDATA%\\Lintendo\\machines.json"
 Assert-Contains $readme "\./lintendo play linux/forbidden-config"
 Assert-Contains $readme "\./lintendo play linux/restless-worker"
 Assert-Contains $readme "\./lintendo play docker/unreachable-database"
 Assert-NotContains $readme "\./lintendo run"
 Assert-NotContains $cli "\srun\)"
+Assert-Contains $controller "ssh @sshArgs"
+Assert-Contains $controller "machine check"
+Assert-Contains $controller "runtime_path"
+Assert-Contains $controller "LINTENDO_CONTROLLER_HOME"
+Assert-Contains $cmdLauncher "controller\\lintendo.ps1"
+Assert-NotContains $controller "sshpass|StrictHostKeyChecking=no|docker.sock"
 
 Assert-NotContains $lifecycle "incus file push.*guest"
 Assert-NotContains $lifecycle "incus file push.*host"

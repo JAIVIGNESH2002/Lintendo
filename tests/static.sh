@@ -5,6 +5,8 @@ cd "$(dirname "$0")/.."
 
 required=(
   "lintendo"
+  "lintendo.cmd"
+  "controller/lintendo.ps1"
   "runtime/lib/instance.sh"
   "runtime/lib/scenario.sh"
   "runtime/lib/lifecycle.sh"
@@ -52,6 +54,7 @@ required=(
   "tests/integration/restless-worker-smoke.sh"
   "tests/integration/unreachable-database-smoke.sh"
   "tests/capabilities.sh"
+  "tests/controller.ps1"
 )
 
 for item in "${required[@]}"; do

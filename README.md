@@ -34,6 +34,8 @@ replaced by a self-contained verifier.
 
 ## Usage
 
+Local Linux runtime:
+
 ```sh
 ./lintendo play linux/silent-service
 ./lintendo play linux/forbidden-config
@@ -42,6 +44,23 @@ replaced by a self-contained verifier.
 ./lintendo verify
 ./lintendo status
 ./lintendo destroy
+```
+
+Remote Play V0 from Windows uses OpenSSH to invoke an existing Linux runtime:
+
+```powershell
+.\lintendo.cmd machine add phoenix --runtime-path /home/jv/Lintendo
+.\lintendo.cmd machine check phoenix
+.\lintendo.cmd play linux/silent-service --machine phoenix
+.\lintendo.cmd status --machine phoenix
+.\lintendo.cmd destroy --machine phoenix
+```
+
+If `lintendo` is installed on the remote user's `PATH`, `--runtime-path` can be
+omitted. Machine configuration is stored locally in:
+
+```text
+%APPDATA%\Lintendo\machines.json
 ```
 
 State is stored at:
@@ -56,6 +75,7 @@ Static tests that do not require Incus:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\tests\static.ps1
+powershell -ExecutionPolicy Bypass -File .\tests\controller.ps1
 ```
 
 Integration tests require a real Linux + Incus host:
