@@ -27,10 +27,11 @@ def psql(sql):
         "-v",
         "ON_ERROR_STOP=1",
         "-At",
+        "-q",
         "-c",
         sql,
     ]
-    return subprocess.run(
+    output = subprocess.run(
         command,
         env=db_env(),
         text=True,
@@ -38,6 +39,8 @@ def psql(sql):
         stderr=subprocess.PIPE,
         check=True,
     ).stdout.strip()
+    lines = [line.strip() for line in output.splitlines() if line.strip()]
+    return lines[-1] if lines else ""
 
 
 def charge(token):
@@ -92,4 +95,3 @@ if __name__ == "__main__":
         print(charge(sys.argv[2]))
     else:
         serve()
-

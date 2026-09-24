@@ -84,6 +84,8 @@ grep -q 'python3' scenarios/linux/restless-worker/quest.yaml
 grep -q 'docker.io' scenarios/docker/unreachable-database/quest.yaml
 grep -q 'capabilities:' scenarios/docker/unreachable-database/quest.yaml
 grep -q 'nesting' scenarios/docker/unreachable-database/quest.yaml
+grep -q '"-q"' scenarios/docker/unreachable-database/assets/status-server.py
+grep -q 'return lines\[-1\]' scenarios/docker/unreachable-database/assets/status-server.py
 grep -q 'User=blackmesa' scenarios/linux/forbidden-config/assets/blackmesa.service
 if grep -q 'Restart=on-failure' scenarios/linux/forbidden-config/assets/blackmesa.service; then
   printf 'forbidden-config service should fail clearly instead of restart-looping\n' >&2
