@@ -1,0 +1,28 @@
+id: linux/forbidden-config
+name: The Forbidden Config
+image: images:debian/13
+dependencies:
+  packages:
+    - python3
+mission: |
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          THE FORBIDDEN CONFIG
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Black Mesa's telemetry service stopped working
+  immediately after a routine deployment.
+
+  Operations confirmed that the application and its
+  configuration file are still present.
+
+  MISSION
+
+  Investigate the failure and restore the telemetry service.
+
+  CONSTRAINTS
+
+  Do not replace the supplied application.
+  Do not replace the configuration file.
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+

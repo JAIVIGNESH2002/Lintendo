@@ -36,7 +36,18 @@ $required = @(
   "scenarios/linux/silent-service/host/incident-check.sh",
   "scenarios/linux/silent-service/host/verify.sh",
   "scenarios/linux/silent-service/assets/status-server.py",
-  "scenarios/linux/silent-service/assets/blackmesa.service"
+  "scenarios/linux/silent-service/assets/blackmesa.service",
+  "scenarios/linux/forbidden-config/quest.yaml",
+  "scenarios/linux/forbidden-config/guest/setup.sh",
+  "scenarios/linux/forbidden-config/guest/baseline.sh",
+  "scenarios/linux/forbidden-config/guest/inject.sh",
+  "scenarios/linux/forbidden-config/host/baseline.sh",
+  "scenarios/linux/forbidden-config/host/incident-check.sh",
+  "scenarios/linux/forbidden-config/host/verify.sh",
+  "scenarios/linux/forbidden-config/assets/status-server.py",
+  "scenarios/linux/forbidden-config/assets/blackmesa.service",
+  "scenarios/linux/forbidden-config/assets/telemetry.conf",
+  "tests/integration/forbidden-config-smoke.sh"
 )
 
 foreach ($item in $required) {
@@ -49,6 +60,10 @@ $quest = Join-Path $root "scenarios/linux/silent-service/quest.yaml"
 $hostVerify = Join-Path $root "scenarios/linux/silent-service/host/verify.sh"
 $hostBaseline = Join-Path $root "scenarios/linux/silent-service/host/baseline.sh"
 $hostIncident = Join-Path $root "scenarios/linux/silent-service/host/incident-check.sh"
+$forbiddenQuest = Join-Path $root "scenarios/linux/forbidden-config/quest.yaml"
+$forbiddenService = Join-Path $root "scenarios/linux/forbidden-config/assets/blackmesa.service"
+$forbiddenInject = Join-Path $root "scenarios/linux/forbidden-config/guest/inject.sh"
+$forbiddenVerify = Join-Path $root "scenarios/linux/forbidden-config/host/verify.sh"
 
 Assert-Contains $instance "bash -s <"
 Assert-Contains $instance "--env `"LINTENDO_INSTANCE_NAME="
@@ -57,9 +72,20 @@ Assert-Contains $instance "ip -4 -o addr show dev"
 Assert-Contains $lifecycle "LINTENDO_INSTANCE_IP="
 Assert-Contains $lifecycle "host/verify\.sh"
 Assert-Contains $quest "python3"
+Assert-Contains $forbiddenQuest "python3"
+Assert-Contains $forbiddenService "User=blackmesa"
+Assert-Contains $forbiddenInject "telemetry.conf"
+Assert-Contains $forbiddenVerify "telemetry.service"
 Assert-Contains $hostVerify "wget"
 Assert-Contains $hostBaseline "wget"
 Assert-Contains $hostIncident "wget"
+
+$readme = Join-Path $root "README.md"
+$cli = Join-Path $root "lintendo"
+Assert-Contains $readme "\./lintendo play linux/silent-service"
+Assert-Contains $readme "\./lintendo play linux/forbidden-config"
+Assert-NotContains $readme "\./lintendo run"
+Assert-NotContains $cli "\srun\)"
 
 Assert-NotContains $lifecycle "incus file push.*guest"
 Assert-NotContains $lifecycle "incus file push.*host"

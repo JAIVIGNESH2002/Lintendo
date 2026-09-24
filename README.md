@@ -7,7 +7,7 @@ This repository currently contains the V0 vertical slice:
 
 - Bash runtime orchestration
 - Incus system-container backend only
-- One scenario: `linux/silent-service`
+- Two scenarios: `linux/silent-service` and `linux/forbidden-config`
 - Baseline, incident, and solution verification
 - Minimal inspectable local state
 
@@ -34,7 +34,8 @@ replaced by a self-contained verifier.
 ## Usage
 
 ```sh
-./lintendo run linux/silent-service
+./lintendo play linux/silent-service
+./lintendo play linux/forbidden-config
 ./lintendo verify
 ./lintendo status
 ./lintendo destroy
@@ -58,5 +59,5 @@ Integration tests require a real Linux + Incus host:
 
 ```sh
 tests/integration/silent-service-smoke.sh
+tests/integration/forbidden-config-smoke.sh
 ```
-

@@ -13,7 +13,7 @@ LINTENDO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 usage() {
   cat <<'EOF'
 Usage:
-  ./lintendo run <scenario-id>
+  ./lintendo play <scenario-id>
   ./lintendo verify
   ./lintendo status
   ./lintendo destroy
@@ -25,12 +25,12 @@ EOF
 main() {
   local command="${1:-}"
   case "$command" in
-    run)
+    play)
       if [ "$#" -ne 2 ]; then
         usage
         exit 2
       fi
-      lintendo_run "$2"
+      lintendo_play "$2"
       ;;
     verify)
       if [ "$#" -ne 1 ]; then
@@ -65,4 +65,3 @@ main() {
 }
 
 main "$@"
-

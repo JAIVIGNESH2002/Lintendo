@@ -45,7 +45,7 @@ lintendo_cleanup_after_init_failure() {
   fi
 }
 
-lintendo_run() {
+lintendo_play() {
   local requested_id="$1"
   local scenario_dir manifest manifest_id image instance ip started_at
   local -a packages

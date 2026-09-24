@@ -13,5 +13,4 @@ trap cleanup EXIT
 printf 'Starting interactive smoke test for linux/silent-service.\n'
 printf 'When the learner shell opens, fix /opt/blackmesa/status-server.py, restart blackmesa.service, then exit.\n'
 
-./lintendo run linux/silent-service
-
+./lintendo play linux/silent-service
