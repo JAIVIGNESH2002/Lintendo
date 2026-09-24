@@ -1,4 +1,5 @@
 $ErrorActionPreference = "Stop"
+Set-PSDebug -Off
 
 function Usage {
   @"
@@ -126,7 +127,6 @@ function Invoke-Ssh($machine, $remoteCommand, [bool]$tty) {
   $sshArgs = Ssh-Args $machine $tty
   $sshArgs += $remoteCommand
   & ssh @sshArgs
-  return $LASTEXITCODE
 }
 
 function Machine-Add($argv) {
@@ -176,11 +176,13 @@ function Machine-Check($argv) {
   if ($argv.Count -ne 1) { throw "machine check requires a name" }
   $machine = Get-Machine $argv[0]
 
-  $code = Invoke-Ssh $machine "printf __LINTENDO_SSH_OK__" $false
+  Invoke-Ssh $machine "true" $false
+  $code = $LASTEXITCODE
   if ($code -ne 0) { throw "Cannot connect to $($machine.name) over SSH" }
   Write-Host "✓ SSH connection works"
 
-  $code = Invoke-Ssh $machine 'test "$(uname -s)" = Linux' $false
+  Invoke-Ssh $machine 'uname -s | grep -qx Linux' $false
+  $code = $LASTEXITCODE
   if ($code -ne 0) { throw "Connected to $($machine.name), but remote OS is not Linux" }
   Write-Host "✓ Remote OS is Linux"
 
@@ -189,11 +191,13 @@ function Machine-Check($argv) {
   } else {
     $runtimeCheck = 'command -v lintendo >/dev/null 2>&1'
   }
-  $code = Invoke-Ssh $machine $runtimeCheck $false
+  Invoke-Ssh $machine $runtimeCheck $false
+  $code = $LASTEXITCODE
   if ($code -ne 0) { throw "Connected to $($machine.name), but Lintendo runtime was not found" }
   Write-Host "✓ Lintendo runtime exists/reachable"
 
-  $code = Invoke-Ssh $machine 'command -v incus >/dev/null 2>&1 && incus list --format csv >/dev/null' $false
+  Invoke-Ssh $machine 'command -v incus >/dev/null 2>&1 && incus list --format csv >/dev/null' $false
+  $code = $LASTEXITCODE
   if ($code -ne 0) { throw "Connected to $($machine.name), but Incus is not usable by this user" }
   Write-Host "✓ Incus is usable by remote user"
 }
@@ -208,8 +212,8 @@ function Remote-Runtime($command, $argv) {
   $runtimeArgs = @($command) + $parsed.positionals
   $remoteCommand = Remote-Lintendo-Command $machine $runtimeArgs
   $needsTty = ($command -eq "play")
-  $code = Invoke-Ssh $machine $remoteCommand $needsTty
-  exit $code
+  Invoke-Ssh $machine $remoteCommand $needsTty
+  exit $LASTEXITCODE
 }
 
 try {
