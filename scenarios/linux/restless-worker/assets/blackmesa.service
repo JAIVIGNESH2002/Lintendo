@@ -1,0 +1,15 @@
+[Unit]
+Description=Black Mesa Restless Worker
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+User=blackmesa
+Group=blackmesa
+EnvironmentFile=/etc/blackmesa/worker.env
+ExecStart=/usr/bin/python3 /opt/blackmesa/restless-worker.py
+Restart=on-failure
+RestartSec=1
+
+[Install]
+WantedBy=multi-user.target

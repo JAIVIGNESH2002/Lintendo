@@ -47,7 +47,18 @@ $required = @(
   "scenarios/linux/forbidden-config/assets/status-server.py",
   "scenarios/linux/forbidden-config/assets/blackmesa.service",
   "scenarios/linux/forbidden-config/assets/telemetry.conf",
-  "tests/integration/forbidden-config-smoke.sh"
+  "scenarios/linux/restless-worker/quest.yaml",
+  "scenarios/linux/restless-worker/guest/setup.sh",
+  "scenarios/linux/restless-worker/guest/baseline.sh",
+  "scenarios/linux/restless-worker/guest/inject.sh",
+  "scenarios/linux/restless-worker/host/baseline.sh",
+  "scenarios/linux/restless-worker/host/incident-check.sh",
+  "scenarios/linux/restless-worker/host/verify.sh",
+  "scenarios/linux/restless-worker/assets/status-server.py",
+  "scenarios/linux/restless-worker/assets/blackmesa.service",
+  "scenarios/linux/restless-worker/assets/worker.env",
+  "tests/integration/forbidden-config-smoke.sh",
+  "tests/integration/restless-worker-smoke.sh"
 )
 
 foreach ($item in $required) {
@@ -64,6 +75,12 @@ $forbiddenQuest = Join-Path $root "scenarios/linux/forbidden-config/quest.yaml"
 $forbiddenService = Join-Path $root "scenarios/linux/forbidden-config/assets/blackmesa.service"
 $forbiddenInject = Join-Path $root "scenarios/linux/forbidden-config/guest/inject.sh"
 $forbiddenVerify = Join-Path $root "scenarios/linux/forbidden-config/host/verify.sh"
+$workerQuest = Join-Path $root "scenarios/linux/restless-worker/quest.yaml"
+$workerService = Join-Path $root "scenarios/linux/restless-worker/assets/blackmesa.service"
+$workerEnv = Join-Path $root "scenarios/linux/restless-worker/assets/worker.env"
+$workerInject = Join-Path $root "scenarios/linux/restless-worker/guest/inject.sh"
+$workerIncident = Join-Path $root "scenarios/linux/restless-worker/host/incident-check.sh"
+$workerVerify = Join-Path $root "scenarios/linux/restless-worker/host/verify.sh"
 
 Assert-Contains $instance "bash -s <"
 Assert-Contains $instance "--env `"LINTENDO_INSTANCE_NAME="
@@ -73,12 +90,25 @@ Assert-Contains $lifecycle "LINTENDO_INSTANCE_IP="
 Assert-Contains $lifecycle "host/verify\.sh"
 Assert-Contains $quest "python3"
 Assert-Contains $forbiddenQuest "python3"
+Assert-Contains $workerQuest "python3"
 Assert-Contains $forbiddenService "User=blackmesa"
 Assert-NotContains $forbiddenService "Restart=on-failure"
 Assert-Contains $forbiddenInject "telemetry.conf"
 Assert-Contains $forbiddenInject "systemctl stop telemetry.service"
 Assert-Contains $forbiddenInject "systemctl start telemetry.service"
 Assert-Contains $forbiddenVerify "telemetry.service"
+Assert-Contains $workerService "User=blackmesa"
+Assert-Contains $workerService "Restart=on-failure"
+Assert-Contains $workerService "EnvironmentFile=/etc/blackmesa/worker.env"
+Assert-Contains $workerEnv "BLACKMESA_WORKER_MODE=process"
+Assert-Contains $workerInject "BLACKMESA_WORKER_MODE=crash"
+Assert-Contains $workerIncident "NRestarts"
+Assert-Contains $workerVerify 'verify\$\(date \+%s%N\)\$\$'
+Assert-Contains $workerVerify 'processed:\$token'
+$workerFiles = Get-ChildItem (Join-Path $root "scenarios/linux/restless-worker") -Recurse -File
+foreach ($file in $workerFiles) {
+  Assert-NotContains $file.FullName "wget|curl|http|/health|8080"
+}
 Assert-Contains $hostVerify "wget"
 Assert-Contains $hostBaseline "wget"
 Assert-Contains $hostIncident "wget"
@@ -87,6 +117,7 @@ $readme = Join-Path $root "README.md"
 $cli = Join-Path $root "lintendo"
 Assert-Contains $readme "\./lintendo play linux/silent-service"
 Assert-Contains $readme "\./lintendo play linux/forbidden-config"
+Assert-Contains $readme "\./lintendo play linux/restless-worker"
 Assert-NotContains $readme "\./lintendo run"
 Assert-NotContains $cli "\srun\)"
 
