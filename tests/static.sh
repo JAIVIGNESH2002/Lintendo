@@ -55,6 +55,10 @@ grep -q 'lintendo_wait_instance_ip' runtime/lib/instance.sh
 grep -q 'ip -4 -o addr show dev' runtime/lib/instance.sh
 grep -q 'LINTENDO_INSTANCE_IP=' runtime/lib/lifecycle.sh
 grep -q 'host/verify\.sh' runtime/lib/lifecycle.sh
+if grep -Eq 'Endpoint externally reachable|Service operational' runtime/lib/lifecycle.sh; then
+  printf 'generic lifecycle should not print scenario-specific success checks\n' >&2
+  exit 1
+fi
 grep -q 'python3' scenarios/linux/silent-service/quest.yaml
 grep -q 'python3' scenarios/linux/forbidden-config/quest.yaml
 grep -q 'python3' scenarios/linux/restless-worker/quest.yaml
@@ -67,6 +71,7 @@ grep -q 'telemetry.conf' scenarios/linux/forbidden-config/guest/inject.sh
 grep -q 'systemctl stop telemetry.service' scenarios/linux/forbidden-config/guest/inject.sh
 grep -q 'systemctl start telemetry.service' scenarios/linux/forbidden-config/guest/inject.sh
 grep -q 'telemetry.service' scenarios/linux/forbidden-config/host/verify.sh
+grep -q 'Telemetry service active' scenarios/linux/forbidden-config/host/verify.sh
 grep -q 'User=blackmesa' scenarios/linux/restless-worker/assets/blackmesa.service
 grep -q 'Restart=on-failure' scenarios/linux/restless-worker/assets/blackmesa.service
 grep -q 'EnvironmentFile=/etc/blackmesa/worker.env' scenarios/linux/restless-worker/assets/blackmesa.service

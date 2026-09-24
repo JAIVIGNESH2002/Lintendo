@@ -13,3 +13,5 @@ system_active="$(incus exec "$instance" -- systemctl is-active blackmesa.service
 [ "$system_active" = "active" ]
 wget -q -T 5 -O - "http://$ip:8080/health" | grep -q "Black Mesa systems operational"
 
+printf '✓ Endpoint externally reachable\n'
+printf '✓ Service operational\n'

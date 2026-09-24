@@ -21,3 +21,7 @@ service_user="$(incus exec "$instance" -- ps -o user= -p "$main_pid" | awk '{pri
 incus exec "$instance" -- runuser -u blackmesa -- test -r /etc/blackmesa/telemetry.conf
 wget -q -T 5 -O - "http://$ip:8080/health" | grep -q "Black Mesa telemetry operational"
 
+printf '✓ Telemetry service active\n'
+printf '✓ Service runs as blackmesa\n'
+printf '✓ Configuration readable by service user\n'
+printf '✓ Health endpoint reachable\n'

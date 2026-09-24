@@ -164,8 +164,6 @@ lintendo_verify() {
   ip="$(lintendo_instance_ip "$instance_name")" || lintendo_die "could not determine instance IP"
 
   if lintendo_run_host_script "$scenario_path/host/verify.sh" "$instance_name" "$ip" "$scenario_path"; then
-    printf '✓ Endpoint externally reachable\n'
-    printf '✓ Service operational\n'
     printf '\nINCIDENT RESOLVED\n'
   else
     printf 'INCIDENT NOT RESOLVED\n' >&2
