@@ -47,6 +47,10 @@ grep -q 'host/verify\.sh' runtime/lib/lifecycle.sh
 grep -q 'python3' scenarios/linux/silent-service/quest.yaml
 grep -q 'python3' scenarios/linux/forbidden-config/quest.yaml
 grep -q 'User=blackmesa' scenarios/linux/forbidden-config/assets/blackmesa.service
+if grep -q 'Restart=on-failure' scenarios/linux/forbidden-config/assets/blackmesa.service; then
+  printf 'forbidden-config service should fail clearly instead of restart-looping\n' >&2
+  exit 1
+fi
 grep -q 'telemetry.conf' scenarios/linux/forbidden-config/guest/inject.sh
 grep -q 'telemetry.service' scenarios/linux/forbidden-config/host/verify.sh
 grep -q 'wget' scenarios/linux/silent-service/host/baseline.sh
