@@ -52,6 +52,8 @@ if grep -q 'Restart=on-failure' scenarios/linux/forbidden-config/assets/blackmes
   exit 1
 fi
 grep -q 'telemetry.conf' scenarios/linux/forbidden-config/guest/inject.sh
+grep -q 'systemctl stop telemetry.service' scenarios/linux/forbidden-config/guest/inject.sh
+grep -q 'systemctl start telemetry.service' scenarios/linux/forbidden-config/guest/inject.sh
 grep -q 'telemetry.service' scenarios/linux/forbidden-config/host/verify.sh
 grep -q 'wget' scenarios/linux/silent-service/host/baseline.sh
 grep -q 'wget' scenarios/linux/silent-service/host/incident-check.sh

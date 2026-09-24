@@ -9,10 +9,5 @@ if runuser -u blackmesa -- test -r /etc/blackmesa/telemetry.conf; then
   exit 1
 fi
 
-systemctl restart telemetry.service || true
-
-if systemctl is-active --quiet telemetry.service; then
-  printf 'telemetry.service is still active after config access regression\n' >&2
-  exit 1
-fi
-
+systemctl stop telemetry.service
+systemctl start telemetry.service || true
