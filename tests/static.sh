@@ -114,6 +114,8 @@ grep -q 'wget' scenarios/linux/forbidden-config/host/incident-check.sh
 grep -q 'wget' scenarios/linux/forbidden-config/host/verify.sh
 grep -q 'docker network disconnect blackmesa-payments payments-api' scenarios/docker/unreachable-database/guest/inject.sh
 grep -q 'docker network connect blackmesa-isolated payments-api' scenarios/docker/unreachable-database/guest/inject.sh
+grep -q 'docker baseline failed' scenarios/docker/unreachable-database/guest/baseline.sh
+grep -q 'payments-api could not perform a database-backed operation' scenarios/docker/unreachable-database/guest/baseline.sh
 grep -q 'blackmesa-postgres-data' scenarios/docker/unreachable-database/host/verify.sh
 grep -q 'fresh database-backed operation succeeds' scenarios/docker/unreachable-database/host/verify.sh
 

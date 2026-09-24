@@ -95,6 +95,7 @@ $workerInject = Join-Path $root "scenarios/linux/restless-worker/guest/inject.sh
 $workerIncident = Join-Path $root "scenarios/linux/restless-worker/host/incident-check.sh"
 $workerVerify = Join-Path $root "scenarios/linux/restless-worker/host/verify.sh"
 $dockerQuest = Join-Path $root "scenarios/docker/unreachable-database/quest.yaml"
+$dockerGuestBaseline = Join-Path $root "scenarios/docker/unreachable-database/guest/baseline.sh"
 $dockerInject = Join-Path $root "scenarios/docker/unreachable-database/guest/inject.sh"
 $dockerVerify = Join-Path $root "scenarios/docker/unreachable-database/host/verify.sh"
 
@@ -139,6 +140,8 @@ Assert-Contains $hostBaseline "wget"
 Assert-Contains $hostIncident "wget"
 Assert-Contains $dockerInject "docker network disconnect blackmesa-payments payments-api"
 Assert-Contains $dockerInject "docker network connect blackmesa-isolated payments-api"
+Assert-Contains $dockerGuestBaseline "docker baseline failed"
+Assert-Contains $dockerGuestBaseline "payments-api could not perform a database-backed operation"
 Assert-Contains $dockerVerify "blackmesa-postgres-data"
 Assert-Contains $dockerVerify "fresh database-backed operation succeeds"
 

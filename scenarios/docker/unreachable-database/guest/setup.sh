@@ -15,7 +15,7 @@ for _ in $(seq 1 30); do
   sleep 1
 done
 
-docker info >/dev/null
+docker info >/dev/null 2>&1
 
 docker rm -f payments-api postgres >/dev/null 2>&1 || true
 docker network rm blackmesa-isolated blackmesa-payments >/dev/null 2>&1 || true
@@ -60,6 +60,11 @@ for _ in $(seq 1 30); do
   sleep 1
 done
 
-docker exec payments-api python3 /opt/payments-api/app.py charge setup-probe >/dev/null
+if ! docker exec payments-api python3 /opt/payments-api/app.py charge setup-probe >/dev/null 2>&1; then
+  printf 'payments-api setup probe failed\n' >&2
+  docker ps -a >&2 || true
+  docker logs payments-api >&2 || true
+  docker logs postgres >&2 || true
+  exit 1
+fi
 docker exec postgres psql -U blackmesa -d payments -c "DELETE FROM payments WHERE token = 'setup-probe';" >/dev/null
-
