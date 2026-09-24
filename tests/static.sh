@@ -82,6 +82,11 @@ if grep -Eq 'Endpoint externally reachable|Service operational' runtime/lib/life
   exit 1
 fi
 grep -q 'python3' scenarios/linux/silent-service/quest.yaml
+grep -q 'health_ready' scenarios/linux/silent-service/guest/baseline.sh
+grep -q 'SECONDS + 10' scenarios/linux/silent-service/guest/baseline.sh
+grep -q 'sleep 0.25' scenarios/linux/silent-service/guest/baseline.sh
+grep -q '>/dev/null 2>&1' scenarios/linux/silent-service/guest/baseline.sh
+grep -q 'Black Mesa systems operational' scenarios/linux/silent-service/guest/baseline.sh
 grep -q 'python3' scenarios/linux/forbidden-config/quest.yaml
 grep -q 'python3' scenarios/linux/restless-worker/quest.yaml
 grep -q 'docker.io' scenarios/docker/unreachable-database/quest.yaml
