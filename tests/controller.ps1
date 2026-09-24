@@ -36,6 +36,12 @@ exit /b 0
   if ($LASTEXITCODE -ne 0) { throw "machine check failed with mocked ssh" }
   $checkText = $check -join "`n"
   if ($checkText -notmatch "connection works") { throw "machine check did not report SSH success" }
+  Set-Content -Encoding ASCII $sshLog ""
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $controller play linux/silent-service --verbose --machine phoenix | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw "remote play forwarding failed with mocked ssh" }
+  $sshText = Get-Content -Raw $sshLog
+  if ($sshText -notmatch "--verbose") { throw "remote play did not forward --verbose" }
+  if ($sshText -notmatch "linux/silent-service") { throw "remote play did not forward quest id" }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $controller machine remove phoenix | Out-Null
   if ($LASTEXITCODE -ne 0) { throw "machine remove failed" }
   $config = Get-Content -Raw $configPath | ConvertFrom-Json

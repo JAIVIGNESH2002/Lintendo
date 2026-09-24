@@ -73,6 +73,7 @@ $required = @(
   "tests/integration/restless-worker-smoke.sh",
   "tests/integration/unreachable-database-smoke.sh",
   "tests/capabilities.sh",
+  "tests/play-output.sh",
   "tests/controller.ps1"
 )
 
@@ -115,6 +116,14 @@ Assert-Contains $scenario "unknown environment capability"
 Assert-Contains $lifecycle "LINTENDO_INSTANCE_IP="
 Assert-Contains $lifecycle "host/verify\.sh"
 Assert-NotContains $lifecycle "Endpoint externally reachable|Service operational"
+Assert-Contains $lifecycle "lintendo_run_play_stage"
+Assert-Contains $lifecycle "lintendo_spinner_wait"
+Assert-Contains $lifecycle "\[ -t 1 \]"
+Assert-Contains $lifecycle "Diagnostic:"
+Assert-Contains $lifecycle "tail -n 80"
+Assert-Contains $lifecycle "Creating environment"
+Assert-Contains $lifecycle "Preparing quest"
+Assert-Contains $lifecycle "Verifying scenario"
 Assert-Contains $quest "python3"
 Assert-Contains $guestBaseline "health_ready"
 Assert-Contains $guestBaseline "SECONDS \+ 10"
@@ -169,6 +178,7 @@ Assert-Contains $readme "\./lintendo play linux/restless-worker"
 Assert-Contains $readme "\./lintendo play docker/unreachable-database"
 Assert-NotContains $readme "\./lintendo run"
 Assert-NotContains $cli "\srun\)"
+Assert-Contains $cli "--verbose"
 Assert-Contains $controller "ssh @sshArgs"
 Assert-Contains $controller "machine check"
 Assert-Contains $controller "runtime_path"

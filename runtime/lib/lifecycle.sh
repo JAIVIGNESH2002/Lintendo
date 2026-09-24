@@ -15,6 +15,116 @@ lintendo_print_step() {
   printf '%s\n' "$1"
 }
 
+lintendo_verbose_step() {
+  [ "${LINTENDO_PLAY_VERBOSE:-0}" = "1" ] || return 0
+  [ -n "${LINTENDO_VERBOSE_LOG:-}" ] || return 0
+  printf '✓ %s\n' "$1" >> "$LINTENDO_VERBOSE_LOG"
+}
+
+lintendo_spinner_wait() {
+  local pid="$1"
+  local label="$2"
+  local frame
+  local frames=(⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏)
+
+  while kill -0 "$pid" >/dev/null 2>&1; do
+    for frame in "${frames[@]}"; do
+      kill -0 "$pid" >/dev/null 2>&1 || break
+      printf '\r%s %s...' "$frame" "$label"
+      sleep 0.1
+    done
+  done
+}
+
+lintendo_print_diagnostic() {
+  local log="$1"
+  [ -s "$log" ] || return 0
+
+  printf '\nDiagnostic:\n' >&2
+  tail -n 80 "$log" >&2
+}
+
+lintendo_run_play_stage() {
+  local label="$1"
+  local success="$2"
+  local failure="$3"
+  shift 3
+
+  local raw_log safe_log status
+  raw_log="$(mktemp)"
+  safe_log="$(mktemp)"
+
+  if [ -t 1 ]; then
+    LINTENDO_VERBOSE_LOG="$safe_log" "$@" >"$raw_log" 2>&1 &
+    local pid=$!
+    lintendo_spinner_wait "$pid" "$label"
+    if wait "$pid"; then
+      status=0
+    else
+      status=$?
+    fi
+    printf '\r\033[K'
+  else
+    printf '%s...\n' "$label"
+    if LINTENDO_VERBOSE_LOG="$safe_log" "$@" >"$raw_log" 2>&1; then
+      status=0
+    else
+      status=$?
+    fi
+  fi
+
+  if [ "$status" -eq 0 ]; then
+    if [ "${LINTENDO_PLAY_VERBOSE:-0}" = "1" ] && [ -s "$safe_log" ]; then
+      cat "$safe_log"
+    fi
+    printf '✓ %s\n' "$success"
+  else
+    printf '✗ %s failed\n' "$label" >&2
+    printf '\n%s\n' "$failure" >&2
+    lintendo_print_diagnostic "$raw_log"
+  fi
+
+  rm -f "$raw_log" "$safe_log"
+  return "$status"
+}
+
+lintendo_play_create_environment() {
+  lintendo_create_instance "$LINTENDO_PLAY_IMAGE" "$LINTENDO_PLAY_INSTANCE" "${LINTENDO_PLAY_CAPABILITIES[@]}"
+  lintendo_write_state "$LINTENDO_PLAY_SCENARIO_ID" "$LINTENDO_PLAY_SCENARIO_DIR" "$LINTENDO_PLAY_INSTANCE" "$LINTENDO_PLAY_STARTED_AT"
+  lintendo_verbose_step "Instance created"
+
+  lintendo_wait_ready "$LINTENDO_PLAY_INSTANCE"
+  lintendo_verbose_step "Instance ready"
+
+  local ip
+  ip="$(lintendo_wait_instance_ip "$LINTENDO_PLAY_INSTANCE")"
+  printf '%s\n' "$ip" > "$LINTENDO_PLAY_IP_FILE"
+  lintendo_verbose_step "Network ready"
+}
+
+lintendo_play_prepare_quest() {
+  lintendo_install_packages "$LINTENDO_PLAY_INSTANCE" "${LINTENDO_PLAY_PACKAGES[@]}"
+  lintendo_verbose_step "Dependencies installed"
+
+  lintendo_push_assets "$LINTENDO_PLAY_INSTANCE" "$LINTENDO_PLAY_SCENARIO_DIR/assets"
+  lintendo_verbose_step "Scenario assets transferred"
+
+  lintendo_exec_guest_script "$LINTENDO_PLAY_INSTANCE" "$LINTENDO_PLAY_SCENARIO_DIR/guest/setup.sh" "$LINTENDO_PLAY_INSTANCE_IP"
+  lintendo_verbose_step "Scenario configured"
+}
+
+lintendo_play_verify_scenario() {
+  lintendo_exec_guest_script "$LINTENDO_PLAY_INSTANCE" "$LINTENDO_PLAY_SCENARIO_DIR/guest/baseline.sh" "$LINTENDO_PLAY_INSTANCE_IP"
+  lintendo_run_host_script "$LINTENDO_PLAY_SCENARIO_DIR/host/baseline.sh" "$LINTENDO_PLAY_INSTANCE" "$LINTENDO_PLAY_INSTANCE_IP" "$LINTENDO_PLAY_SCENARIO_DIR"
+  lintendo_verbose_step "Baseline verified"
+
+  lintendo_exec_guest_script "$LINTENDO_PLAY_INSTANCE" "$LINTENDO_PLAY_SCENARIO_DIR/guest/inject.sh" "$LINTENDO_PLAY_INSTANCE_IP"
+  lintendo_verbose_step "Incident initialized"
+
+  lintendo_run_host_script "$LINTENDO_PLAY_SCENARIO_DIR/host/incident-check.sh" "$LINTENDO_PLAY_INSTANCE" "$LINTENDO_PLAY_INSTANCE_IP" "$LINTENDO_PLAY_SCENARIO_DIR"
+  lintendo_verbose_step "Incident verified"
+}
+
 lintendo_prompt_yes_no() {
   local prompt="$1"
   local default_yes="${2:-yes}"
@@ -47,7 +157,8 @@ lintendo_cleanup_after_init_failure() {
 
 lintendo_play() {
   local requested_id="$1"
-  local scenario_dir manifest manifest_id image instance ip started_at
+  local verbose="${2:-0}"
+  local scenario_dir manifest manifest_id image instance ip started_at title ip_file start_seconds elapsed
   local -a packages
   local -a capabilities
 
@@ -60,6 +171,8 @@ lintendo_play() {
   manifest="$scenario_dir/quest.yaml"
   manifest_id="$(lintendo_yaml_scalar "$manifest" id)"
   [ "$manifest_id" = "$requested_id" ] || lintendo_die "scenario id mismatch: requested $requested_id, manifest has $manifest_id"
+  title="$(lintendo_yaml_scalar "$manifest" name)"
+  [ -n "$title" ] || title="$requested_id"
   image="$(lintendo_yaml_scalar "$manifest" image)"
   mapfile -t packages < <(lintendo_yaml_packages "$manifest")
   mapfile -t capabilities < <(lintendo_yaml_capabilities "$manifest")
@@ -68,80 +181,60 @@ lintendo_play() {
 
   instance="$(lintendo_instance_name "$requested_id")"
   started_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  ip_file="$(mktemp)"
+  start_seconds="$SECONDS"
 
-  lintendo_print_step "Preparing environment..."
-  lintendo_create_instance "$image" "$instance" "${capabilities[@]}"
-  lintendo_write_state "$requested_id" "$scenario_dir" "$instance" "$started_at"
-  printf '✓ Instance created: %s\n' "$instance"
+  LINTENDO_PLAY_VERBOSE="$verbose"
+  LINTENDO_PLAY_SCENARIO_ID="$requested_id"
+  LINTENDO_PLAY_SCENARIO_DIR="$scenario_dir"
+  LINTENDO_PLAY_IMAGE="$image"
+  LINTENDO_PLAY_INSTANCE="$instance"
+  LINTENDO_PLAY_STARTED_AT="$started_at"
+  LINTENDO_PLAY_IP_FILE="$ip_file"
+  LINTENDO_PLAY_PACKAGES=("${packages[@]}")
+  LINTENDO_PLAY_CAPABILITIES=("${capabilities[@]}")
 
-  if ! lintendo_wait_ready "$instance"; then
-    printf '✗ Instance did not become ready\n' >&2
+  lintendo_print_step "Preparing $title..."
+  lintendo_print_step ""
+
+  if ! lintendo_run_play_stage \
+    "Creating environment" \
+    "Environment created" \
+    "Lintendo could not create a usable quest environment." \
+    lintendo_play_create_environment; then
     lintendo_cleanup_after_init_failure "$instance"
+    rm -f "$ip_file"
     return 1
   fi
-  ip="$(lintendo_wait_instance_ip "$instance")" || {
-    printf '✗ Instance did not acquire a usable IPv4 address\n' >&2
-    lintendo_cleanup_after_init_failure "$instance"
-    return 1
-  }
-  printf '✓ Instance ready: %s\n' "$ip"
 
-  if ! lintendo_install_packages "$instance" "${packages[@]}"; then
-    printf '✗ Dependency installation failed\n' >&2
+  ip="$(cat "$ip_file")"
+  LINTENDO_PLAY_INSTANCE_IP="$ip"
+
+  if ! lintendo_run_play_stage \
+    "Preparing quest" \
+    "Quest prepared" \
+    "Lintendo could not prepare the quest environment." \
+    lintendo_play_prepare_quest; then
     lintendo_cleanup_after_init_failure "$instance"
+    rm -f "$ip_file"
     return 1
   fi
-  printf '✓ Dependencies installed\n'
 
-  if ! lintendo_push_assets "$instance" "$scenario_dir/assets"; then
-    printf '✗ Asset transfer failed\n' >&2
+  if ! lintendo_run_play_stage \
+    "Verifying scenario" \
+    "Scenario verified" \
+    "Lintendo could not establish the quest's starting state." \
+    lintendo_play_verify_scenario; then
     lintendo_cleanup_after_init_failure "$instance"
+    rm -f "$ip_file"
     return 1
   fi
-  printf '✓ Scenario assets transferred\n'
 
-  if ! lintendo_exec_guest_script "$instance" "$scenario_dir/guest/setup.sh" "$ip"; then
-    printf '✗ Guest setup failed\n' >&2
-    lintendo_cleanup_after_init_failure "$instance"
-    return 1
-  fi
-  printf '✓ Scenario configured\n'
+  rm -f "$ip_file"
+  elapsed=$((SECONDS - start_seconds))
 
   lintendo_print_step ""
-  lintendo_print_step "Checking baseline..."
-  if ! lintendo_exec_guest_script "$instance" "$scenario_dir/guest/baseline.sh" "$ip"; then
-    printf '✗ Guest baseline validation failed\n' >&2
-    printf 'Scenario could not establish a known-good state.\n' >&2
-    lintendo_cleanup_after_init_failure "$instance"
-    return 1
-  fi
-  if ! lintendo_run_host_script "$scenario_dir/host/baseline.sh" "$instance" "$ip" "$scenario_dir"; then
-    printf '✗ Host baseline validation failed\n' >&2
-    printf 'Scenario could not establish a known-good state.\n' >&2
-    lintendo_cleanup_after_init_failure "$instance"
-    return 1
-  fi
-  printf '✓ Baseline verified\n'
-
-  lintendo_print_step ""
-  lintendo_print_step "Injecting incident..."
-  if ! lintendo_exec_guest_script "$instance" "$scenario_dir/guest/inject.sh" "$ip"; then
-    printf '✗ Injection failed\n' >&2
-    lintendo_cleanup_after_init_failure "$instance"
-    return 1
-  fi
-  printf '✓ Injection executed\n'
-
-  lintendo_print_step ""
-  lintendo_print_step "Checking incident..."
-  if ! lintendo_run_host_script "$scenario_dir/host/incident-check.sh" "$instance" "$ip" "$scenario_dir"; then
-    printf '✗ Expected failure was not reproduced\n' >&2
-    printf 'Scenario initialization failed.\n' >&2
-    lintendo_cleanup_after_init_failure "$instance"
-    return 1
-  fi
-  printf '✓ Incident verified\n'
-
+  lintendo_print_step "Ready in ${elapsed}s"
   lintendo_print_step ""
   lintendo_yaml_block "$manifest" mission
   lintendo_print_step ""

@@ -13,7 +13,7 @@ LINTENDO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 usage() {
   cat <<'EOF'
 Usage:
-  ./lintendo play <scenario-id>
+  ./lintendo play <scenario-id> [--verbose]
   ./lintendo verify
   ./lintendo status
   ./lintendo destroy
@@ -26,11 +26,27 @@ main() {
   local command="${1:-}"
   case "$command" in
     play)
-      if [ "$#" -ne 2 ]; then
+      if [ "$#" -lt 2 ]; then
         usage
         exit 2
       fi
-      lintendo_play "$2"
+      local scenario_id="$2"
+      local verbose=0
+      shift 2
+      while [ "$#" -gt 0 ]; do
+        case "$1" in
+          --verbose)
+            verbose=1
+            ;;
+          *)
+            printf 'Unknown play option: %s\n\n' "$1" >&2
+            usage >&2
+            exit 2
+            ;;
+        esac
+        shift
+      done
+      lintendo_play "$scenario_id" "$verbose"
       ;;
     verify)
       if [ "$#" -ne 1 ]; then

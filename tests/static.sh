@@ -54,6 +54,7 @@ required=(
   "tests/integration/restless-worker-smoke.sh"
   "tests/integration/unreachable-database-smoke.sh"
   "tests/capabilities.sh"
+  "tests/play-output.sh"
   "tests/controller.ps1"
 )
 
@@ -72,6 +73,14 @@ grep -q 'LINTENDO_INSTANCE_IP=' runtime/lib/lifecycle.sh
 grep -q 'host/verify\.sh' runtime/lib/lifecycle.sh
 grep -q 'lintendo_yaml_capabilities' runtime/lib/scenario.sh
 grep -q 'unknown environment capability' runtime/lib/scenario.sh
+grep -q 'lintendo_run_play_stage' runtime/lib/lifecycle.sh
+grep -q 'lintendo_spinner_wait' runtime/lib/lifecycle.sh
+grep -q '\[ -t 1 \]' runtime/lib/lifecycle.sh
+grep -q 'Diagnostic:' runtime/lib/lifecycle.sh
+grep -q 'tail -n 80' runtime/lib/lifecycle.sh
+grep -q 'Creating environment' runtime/lib/lifecycle.sh
+grep -q 'Preparing quest' runtime/lib/lifecycle.sh
+grep -q 'Verifying scenario' runtime/lib/lifecycle.sh
 grep -q 'security.nesting=true' runtime/lib/instance.sh
 if grep -q 'security.privileged' runtime/lib/*.sh scenarios/*/*/quest.yaml; then
   printf 'runtime/scenarios must not enable privileged Incus containers\n' >&2
@@ -133,6 +142,7 @@ if grep -q './lintendo run' README.md tests/integration/*.sh lintendo; then
   printf 'old learner-facing run command still documented\n' >&2
   exit 1
 fi
+grep -q -- '--verbose' lintendo
 
 if grep -Eq 'search|leaderboard|registry|account|frontend|database' runtime/lib/*.sh lintendo; then
   printf 'unexpected future-scope term found in runtime\n' >&2

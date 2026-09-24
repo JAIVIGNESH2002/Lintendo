@@ -46,12 +46,20 @@ Local Linux runtime:
 ./lintendo destroy
 ```
 
+Use `--verbose` with `play` to show safe lifecycle milestones while still
+hiding setup command output:
+
+```sh
+./lintendo play linux/silent-service --verbose
+```
+
 Remote Play V0 from Windows uses OpenSSH to invoke an existing Linux runtime:
 
 ```powershell
 .\lintendo.cmd machine add phoenix --runtime-path /home/jv/Lintendo
 .\lintendo.cmd machine check phoenix
 .\lintendo.cmd play linux/silent-service --machine phoenix
+.\lintendo.cmd play linux/silent-service --verbose --machine phoenix
 .\lintendo.cmd status --machine phoenix
 .\lintendo.cmd destroy --machine phoenix
 ```
@@ -76,6 +84,15 @@ Static tests that do not require Incus:
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\tests\static.ps1
 powershell -ExecutionPolicy Bypass -File .\tests\controller.ps1
+```
+
+Additional Bash tests that do not require Incus:
+
+```sh
+tests/play-output.sh
+tests/static.sh
+tests/capabilities.sh
+tests/ip-discovery.sh
 ```
 
 Integration tests require a real Linux + Incus host:
