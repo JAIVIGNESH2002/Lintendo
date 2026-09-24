@@ -1,0 +1,33 @@
+id: docker/unreachable-database
+name: The Unreachable Database
+image: images:debian/13
+environment:
+  capabilities:
+    - nesting
+dependencies:
+  packages:
+    - ca-certificates
+    - docker.io
+mission: |
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        THE UNREACHABLE DATABASE
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Black Mesa's payments API is online, but operations
+  requiring database access are failing.
+
+  Operations reports that the PostgreSQL container
+  itself appears healthy.
+
+  MISSION
+
+  Investigate the deployment and restore database-backed
+  API functionality.
+
+  CONSTRAINTS
+
+  Do not replace the supplied application.
+  Do not delete or recreate the database.
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+

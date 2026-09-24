@@ -53,6 +53,35 @@ lintendo_yaml_packages() {
   ' "$file"
 }
 
+lintendo_yaml_capabilities() {
+  local file="$1"
+  awk '
+    /^[[:space:]]*environment:[[:space:]]*$/ { in_environment=1; next }
+    in_environment && /^[^[:space:]]/ { in_environment=0; in_capabilities=0 }
+    in_environment && /^[[:space:]]*capabilities:[[:space:]]*$/ { in_capabilities=1; next }
+    in_capabilities && /^[[:space:]]*-[[:space:]]*/ {
+      sub(/^[[:space:]]*-[[:space:]]*/, "")
+      print
+      next
+    }
+    in_capabilities && /^[[:space:]]*[A-Za-z0-9_-]+:/ { in_capabilities=0 }
+  ' "$file"
+}
+
+lintendo_validate_capabilities() {
+  local manifest="$1"
+  local capability
+  while IFS= read -r capability; do
+    case "$capability" in
+      ""|nesting)
+        ;;
+      *)
+        lintendo_die "unknown environment capability: $capability"
+        ;;
+    esac
+  done < <(lintendo_yaml_capabilities "$manifest")
+}
+
 lintendo_yaml_block() {
   local file="$1"
   local key="$2"
@@ -94,6 +123,7 @@ lintendo_validate_scenario() {
   image="$(lintendo_yaml_scalar "$manifest" image)"
   [ -n "$id" ] || lintendo_die "quest.yaml missing id"
   [ -n "$image" ] || lintendo_die "quest.yaml missing image"
+  lintendo_validate_capabilities "$manifest"
 }
 
 lintendo_load_state() {
@@ -131,4 +161,3 @@ lintendo_require_active_state() {
   [ -n "${scenario_path:-}" ] || lintendo_die "state missing scenario_path"
   [ -n "${instance_name:-}" ] || lintendo_die "state missing instance_name"
 }
-

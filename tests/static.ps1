@@ -57,8 +57,20 @@ $required = @(
   "scenarios/linux/restless-worker/assets/status-server.py",
   "scenarios/linux/restless-worker/assets/blackmesa.service",
   "scenarios/linux/restless-worker/assets/worker.env",
+  "scenarios/docker/unreachable-database/quest.yaml",
+  "scenarios/docker/unreachable-database/guest/setup.sh",
+  "scenarios/docker/unreachable-database/guest/baseline.sh",
+  "scenarios/docker/unreachable-database/guest/inject.sh",
+  "scenarios/docker/unreachable-database/host/baseline.sh",
+  "scenarios/docker/unreachable-database/host/incident-check.sh",
+  "scenarios/docker/unreachable-database/host/verify.sh",
+  "scenarios/docker/unreachable-database/assets/status-server.py",
+  "scenarios/docker/unreachable-database/assets/blackmesa.service",
+  "scenarios/docker/unreachable-database/assets/payments-api.Dockerfile",
   "tests/integration/forbidden-config-smoke.sh",
-  "tests/integration/restless-worker-smoke.sh"
+  "tests/integration/restless-worker-smoke.sh",
+  "tests/integration/unreachable-database-smoke.sh",
+  "tests/capabilities.sh"
 )
 
 foreach ($item in $required) {
@@ -67,6 +79,7 @@ foreach ($item in $required) {
 
 $lifecycle = Join-Path $root "runtime/lib/lifecycle.sh"
 $instance = Join-Path $root "runtime/lib/instance.sh"
+$scenario = Join-Path $root "runtime/lib/scenario.sh"
 $quest = Join-Path $root "scenarios/linux/silent-service/quest.yaml"
 $hostVerify = Join-Path $root "scenarios/linux/silent-service/host/verify.sh"
 $hostBaseline = Join-Path $root "scenarios/linux/silent-service/host/baseline.sh"
@@ -81,17 +94,27 @@ $workerEnv = Join-Path $root "scenarios/linux/restless-worker/assets/worker.env"
 $workerInject = Join-Path $root "scenarios/linux/restless-worker/guest/inject.sh"
 $workerIncident = Join-Path $root "scenarios/linux/restless-worker/host/incident-check.sh"
 $workerVerify = Join-Path $root "scenarios/linux/restless-worker/host/verify.sh"
+$dockerQuest = Join-Path $root "scenarios/docker/unreachable-database/quest.yaml"
+$dockerInject = Join-Path $root "scenarios/docker/unreachable-database/guest/inject.sh"
+$dockerVerify = Join-Path $root "scenarios/docker/unreachable-database/host/verify.sh"
 
 Assert-Contains $instance "bash -s <"
 Assert-Contains $instance "--env `"LINTENDO_INSTANCE_NAME="
 Assert-Contains $instance "lintendo_wait_instance_ip"
 Assert-Contains $instance "ip -4 -o addr show dev"
+Assert-Contains $instance "security.nesting=true"
+Assert-NotContains $instance "security.privileged"
+Assert-Contains $scenario "lintendo_yaml_capabilities"
+Assert-Contains $scenario "unknown environment capability"
 Assert-Contains $lifecycle "LINTENDO_INSTANCE_IP="
 Assert-Contains $lifecycle "host/verify\.sh"
 Assert-NotContains $lifecycle "Endpoint externally reachable|Service operational"
 Assert-Contains $quest "python3"
 Assert-Contains $forbiddenQuest "python3"
 Assert-Contains $workerQuest "python3"
+Assert-Contains $dockerQuest "docker.io"
+Assert-Contains $dockerQuest "capabilities:"
+Assert-Contains $dockerQuest "nesting"
 Assert-Contains $forbiddenService "User=blackmesa"
 Assert-NotContains $forbiddenService "Restart=on-failure"
 Assert-Contains $forbiddenInject "telemetry.conf"
@@ -114,12 +137,17 @@ foreach ($file in $workerFiles) {
 Assert-Contains $hostVerify "wget"
 Assert-Contains $hostBaseline "wget"
 Assert-Contains $hostIncident "wget"
+Assert-Contains $dockerInject "docker network disconnect blackmesa-payments payments-api"
+Assert-Contains $dockerInject "docker network connect blackmesa-isolated payments-api"
+Assert-Contains $dockerVerify "blackmesa-postgres-data"
+Assert-Contains $dockerVerify "fresh database-backed operation succeeds"
 
 $readme = Join-Path $root "README.md"
 $cli = Join-Path $root "lintendo"
 Assert-Contains $readme "\./lintendo play linux/silent-service"
 Assert-Contains $readme "\./lintendo play linux/forbidden-config"
 Assert-Contains $readme "\./lintendo play linux/restless-worker"
+Assert-Contains $readme "\./lintendo play docker/unreachable-database"
 Assert-NotContains $readme "\./lintendo run"
 Assert-NotContains $cli "\srun\)"
 

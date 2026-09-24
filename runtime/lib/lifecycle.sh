@@ -49,6 +49,7 @@ lintendo_play() {
   local requested_id="$1"
   local scenario_dir manifest manifest_id image instance ip started_at
   local -a packages
+  local -a capabilities
 
   if lintendo_load_state; then
     lintendo_die "an active quest already exists: ${scenario_id:-unknown} (${instance_name:-unknown})"
@@ -61,6 +62,7 @@ lintendo_play() {
   [ "$manifest_id" = "$requested_id" ] || lintendo_die "scenario id mismatch: requested $requested_id, manifest has $manifest_id"
   image="$(lintendo_yaml_scalar "$manifest" image)"
   mapfile -t packages < <(lintendo_yaml_packages "$manifest")
+  mapfile -t capabilities < <(lintendo_yaml_capabilities "$manifest")
 
   lintendo_require_incus
 
@@ -68,7 +70,7 @@ lintendo_play() {
   started_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
   lintendo_print_step "Preparing environment..."
-  lintendo_create_instance "$image" "$instance"
+  lintendo_create_instance "$image" "$instance" "${capabilities[@]}"
   lintendo_write_state "$requested_id" "$scenario_dir" "$instance" "$started_at"
   printf '✓ Instance created: %s\n' "$instance"
 

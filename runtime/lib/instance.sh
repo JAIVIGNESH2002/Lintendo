@@ -16,7 +16,27 @@ lintendo_instance_name() {
 lintendo_create_instance() {
   local image="$1"
   local name="$2"
-  incus launch "$image" "$name" >/dev/null
+  shift 2
+
+  if [ "$#" -eq 0 ]; then
+    incus launch "$image" "$name" >/dev/null
+    return
+  fi
+
+  local capability
+  local -a launch_args
+  for capability in "$@"; do
+    case "$capability" in
+      nesting)
+        launch_args+=("-c" "security.nesting=true")
+        ;;
+      *)
+        lintendo_die "unknown environment capability: $capability"
+        ;;
+    esac
+  done
+
+  incus launch "$image" "$name" "${launch_args[@]}" >/dev/null
 }
 
 lintendo_wait_ready() {

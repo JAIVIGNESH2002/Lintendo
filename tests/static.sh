@@ -38,8 +38,20 @@ required=(
   "scenarios/linux/restless-worker/assets/status-server.py"
   "scenarios/linux/restless-worker/assets/blackmesa.service"
   "scenarios/linux/restless-worker/assets/worker.env"
+  "scenarios/docker/unreachable-database/quest.yaml"
+  "scenarios/docker/unreachable-database/guest/setup.sh"
+  "scenarios/docker/unreachable-database/guest/baseline.sh"
+  "scenarios/docker/unreachable-database/guest/inject.sh"
+  "scenarios/docker/unreachable-database/host/baseline.sh"
+  "scenarios/docker/unreachable-database/host/incident-check.sh"
+  "scenarios/docker/unreachable-database/host/verify.sh"
+  "scenarios/docker/unreachable-database/assets/status-server.py"
+  "scenarios/docker/unreachable-database/assets/blackmesa.service"
+  "scenarios/docker/unreachable-database/assets/payments-api.Dockerfile"
   "tests/integration/forbidden-config-smoke.sh"
   "tests/integration/restless-worker-smoke.sh"
+  "tests/integration/unreachable-database-smoke.sh"
+  "tests/capabilities.sh"
 )
 
 for item in "${required[@]}"; do
@@ -55,6 +67,13 @@ grep -q 'lintendo_wait_instance_ip' runtime/lib/instance.sh
 grep -q 'ip -4 -o addr show dev' runtime/lib/instance.sh
 grep -q 'LINTENDO_INSTANCE_IP=' runtime/lib/lifecycle.sh
 grep -q 'host/verify\.sh' runtime/lib/lifecycle.sh
+grep -q 'lintendo_yaml_capabilities' runtime/lib/scenario.sh
+grep -q 'unknown environment capability' runtime/lib/scenario.sh
+grep -q 'security.nesting=true' runtime/lib/instance.sh
+if grep -q 'security.privileged' runtime/lib/*.sh scenarios/*/*/quest.yaml; then
+  printf 'runtime/scenarios must not enable privileged Incus containers\n' >&2
+  exit 1
+fi
 if grep -Eq 'Endpoint externally reachable|Service operational' runtime/lib/lifecycle.sh; then
   printf 'generic lifecycle should not print scenario-specific success checks\n' >&2
   exit 1
@@ -62,6 +81,9 @@ fi
 grep -q 'python3' scenarios/linux/silent-service/quest.yaml
 grep -q 'python3' scenarios/linux/forbidden-config/quest.yaml
 grep -q 'python3' scenarios/linux/restless-worker/quest.yaml
+grep -q 'docker.io' scenarios/docker/unreachable-database/quest.yaml
+grep -q 'capabilities:' scenarios/docker/unreachable-database/quest.yaml
+grep -q 'nesting' scenarios/docker/unreachable-database/quest.yaml
 grep -q 'User=blackmesa' scenarios/linux/forbidden-config/assets/blackmesa.service
 if grep -q 'Restart=on-failure' scenarios/linux/forbidden-config/assets/blackmesa.service; then
   printf 'forbidden-config service should fail clearly instead of restart-looping\n' >&2
@@ -90,6 +112,10 @@ grep -q 'wget' scenarios/linux/silent-service/host/verify.sh
 grep -q 'wget' scenarios/linux/forbidden-config/host/baseline.sh
 grep -q 'wget' scenarios/linux/forbidden-config/host/incident-check.sh
 grep -q 'wget' scenarios/linux/forbidden-config/host/verify.sh
+grep -q 'docker network disconnect blackmesa-payments payments-api' scenarios/docker/unreachable-database/guest/inject.sh
+grep -q 'docker network connect blackmesa-isolated payments-api' scenarios/docker/unreachable-database/guest/inject.sh
+grep -q 'blackmesa-postgres-data' scenarios/docker/unreachable-database/host/verify.sh
+grep -q 'fresh database-backed operation succeeds' scenarios/docker/unreachable-database/host/verify.sh
 
 if grep -q './lintendo run' README.md tests/integration/*.sh lintendo; then
   printf 'old learner-facing run command still documented\n' >&2
