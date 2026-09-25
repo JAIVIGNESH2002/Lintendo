@@ -8,6 +8,7 @@ Usage:
   lintendo machine list
   lintendo machine remove <name>
   lintendo machine check <name>
+  lintendo machine doctor <name>
 
   lintendo play <quest> --machine <name>
   lintendo status --machine <name>
@@ -123,10 +124,37 @@ function Remote-Lintendo-Command($machine, $runtimeArgs) {
   return "lintendo $joinedArgs"
 }
 
+function Ssh-Executable {
+  if ($env:LINTENDO_SSH) {
+    return $env:LINTENDO_SSH
+  }
+  return "ssh"
+}
+
 function Invoke-Ssh($machine, $remoteCommand, [bool]$tty) {
   $sshArgs = Ssh-Args $machine $tty
   $sshArgs += $remoteCommand
-  & ssh @sshArgs
+  $sshExe = Ssh-Executable
+  & $sshExe @sshArgs
+}
+
+function Ok-Mark {
+  return [string][char]0x2713
+}
+
+function Fail-Mark {
+  return [string][char]0x2717
+}
+
+function Invoke-Ssh-Capture($machine, $remoteCommand, [bool]$tty) {
+  $sshArgs = Ssh-Args $machine $tty
+  $sshArgs += $remoteCommand
+  $sshExe = Ssh-Executable
+  $output = & $sshExe @sshArgs 2>&1
+  return [pscustomobject]@{
+    code = $LASTEXITCODE
+    output = @($output | ForEach-Object { [string]$_ })
+  }
 }
 
 function Machine-Add($argv) {
@@ -179,12 +207,12 @@ function Machine-Check($argv) {
   Invoke-Ssh $machine "true" $false
   $code = $LASTEXITCODE
   if ($code -ne 0) { throw "Cannot connect to $($machine.name) over SSH" }
-  Write-Host "✓ SSH connection works"
+  Write-Host ("{0} SSH connection works" -f (Ok-Mark))
 
   Invoke-Ssh $machine 'uname -s | grep -qx Linux' $false
   $code = $LASTEXITCODE
   if ($code -ne 0) { throw "Connected to $($machine.name), but remote OS is not Linux" }
-  Write-Host "✓ Remote OS is Linux"
+  Write-Host ("{0} Remote OS is Linux" -f (Ok-Mark))
 
   if ($machine.runtime_path) {
     $runtimeCheck = "test -x $(Shell-Quote $machine.runtime_path)/lintendo"
@@ -194,12 +222,165 @@ function Machine-Check($argv) {
   Invoke-Ssh $machine $runtimeCheck $false
   $code = $LASTEXITCODE
   if ($code -ne 0) { throw "Connected to $($machine.name), but Lintendo runtime was not found" }
-  Write-Host "✓ Lintendo runtime exists/reachable"
+  Write-Host ("{0} Lintendo runtime exists/reachable" -f (Ok-Mark))
 
   Invoke-Ssh $machine 'command -v incus >/dev/null 2>&1 && incus list --format csv >/dev/null' $false
   $code = $LASTEXITCODE
   if ($code -ne 0) { throw "Connected to $($machine.name), but Incus is not usable by this user" }
-  Write-Host "✓ Incus is usable by remote user"
+  Write-Host ("{0} Incus is usable by remote user" -f (Ok-Mark))
+}
+
+function Doctor-Ok($message) {
+  Write-Host ("  {0} {1}" -f (Ok-Mark), $message)
+}
+
+function Doctor-Fail($message, $hint = $null) {
+  Write-Host ("  {0} {1}" -f (Fail-Mark), $message)
+  if ($hint) {
+    Write-Host "    Hint: $hint"
+  }
+  return $false
+}
+
+function Doctor-Skip($message) {
+  Write-Host "  - $message"
+}
+
+function Test-Remote($machine, $command) {
+  $result = Invoke-Ssh-Capture $machine $command $false
+  return ($result.code -eq 0)
+}
+
+function Machine-Doctor($argv) {
+  if ($argv.Count -ne 1) { throw "machine doctor requires a name" }
+  $machine = Get-Machine $argv[0]
+  $ready = $true
+
+  Write-Host "Checking $($machine.name)..."
+  Write-Host ""
+  Write-Host "Connection"
+
+  $ssh = Invoke-Ssh-Capture $machine "true" $false
+  if ($ssh.code -ne 0) {
+    $ready = Doctor-Fail "SSH connection failed" "Confirm host, port, username, key, and authorized_keys on the remote machine."
+    Write-Host ""
+    Write-Host ("{0} Machine is not ready for Lintendo" -f (Fail-Mark))
+    return 1
+  }
+  Doctor-Ok "SSH reachable"
+
+  $platform = Invoke-Ssh-Capture $machine "uname -s; uname -m" $false
+  $os = if ($platform.output.Count -ge 1) { $platform.output[0].Trim() } else { "" }
+  $arch = if ($platform.output.Count -ge 2) { $platform.output[1].Trim() } else { "" }
+  if ($platform.code -ne 0 -or $os -ne "Linux") {
+    $ready = Doctor-Fail "Remote OS is not Linux" "Lintendo V0 expects a Linux host with Incus."
+    Write-Host ""
+    Write-Host "Permissions"
+    Doctor-Skip "sudo not checked"
+    Write-Host ""
+    Write-Host "Incus"
+    Doctor-Skip "Incus not checked"
+    Write-Host ""
+    Write-Host "Lintendo"
+    Doctor-Skip "Runtime not checked"
+    Write-Host ""
+    Write-Host ("{0} Machine is not ready for Lintendo" -f (Fail-Mark))
+    return 1
+  }
+
+  if ($arch -in @("x86_64", "amd64")) {
+    Doctor-Ok "Linux x86_64"
+  } else {
+    $ready = Doctor-Fail "Unsupported architecture: $arch" "This V0 runtime has been validated on Debian x86_64 hosts."
+  }
+
+  Write-Host ""
+  Write-Host "Permissions"
+  if (& Test-Remote -machine $machine -command "command -v sudo") {
+    Doctor-Ok "sudo available"
+  } else {
+    $ready = Doctor-Fail "sudo not available" "Install/configure sudo manually if you need to prepare this host."
+  }
+
+  Write-Host ""
+  Write-Host "Incus"
+  if (!(& Test-Remote -machine $machine -command "command -v incus")) {
+    $ready = Doctor-Fail "Incus not installed" "Install Incus on the remote Linux host."
+    Doctor-Skip "Incus user membership not checked"
+    Doctor-Skip "Current session access not checked"
+    Doctor-Skip "Incus daemon access not checked"
+    Doctor-Skip "Incus initialization not checked"
+    Doctor-Skip "Storage not checked"
+    Doctor-Skip "Networking not checked"
+  } else {
+    Doctor-Ok "Incus installed"
+
+    $configuredMember = "id -nG `$USER | grep -qw incus-admin"
+    if (& Test-Remote -machine $machine -command $configuredMember) {
+      Doctor-Ok "user listed in incus-admin"
+    } else {
+      $ready = Doctor-Fail "user is not listed in incus-admin" "Add the remote user to incus-admin, then start a new login session."
+    }
+
+    $effectiveMember = "id -nG | grep -qw incus-admin"
+    if (& Test-Remote -machine $machine -command $effectiveMember) {
+      Doctor-Ok "current session has incus-admin"
+    } else {
+      $ready = Doctor-Fail "current session lacks incus-admin" "Log out and reconnect after adding the user to incus-admin."
+    }
+
+    $incusAccess = & Test-Remote -machine $machine -command "incus list --format csv"
+    if ($incusAccess) {
+      Doctor-Ok "Incus daemon access"
+
+      if (& Test-Remote -machine $machine -command "incus profile show default") {
+        Doctor-Ok "Incus initialized"
+      } else {
+        $ready = Doctor-Fail "Incus not initialized" "Run Incus initialization manually on the host."
+      }
+
+      $storageCheck = "incus storage list --format csv -c n | grep -q ."
+      if (& Test-Remote -machine $machine -command $storageCheck) {
+        Doctor-Ok "Storage available"
+      } else {
+        $ready = Doctor-Fail "No usable storage pool" "Create or initialize an Incus storage pool."
+      }
+
+      $networkCheck = "incus network list --format csv -c n" + ",t,m | grep -q " + ",bridge,YES"
+      if (& Test-Remote -machine $machine -command $networkCheck) {
+        Doctor-Ok "Networking available"
+      } else {
+        $ready = Doctor-Fail "No usable managed bridge network" "Create or initialize an Incus managed bridge network."
+      }
+    } else {
+      $ready = Doctor-Fail "Current user cannot access Incus daemon" "Do not use sudo for Lintendo runs; fix normal Incus access for this user."
+      Doctor-Skip "Incus initialization not checked"
+      Doctor-Skip "Storage not checked"
+      Doctor-Skip "Networking not checked"
+    }
+  }
+
+  Write-Host ""
+  Write-Host "Lintendo"
+  if ($machine.runtime_path) {
+    $runtimeCheck = "test -x $(Shell-Quote $machine.runtime_path)/lintendo"
+  } else {
+    $runtimeCheck = "command -v lintendo"
+  }
+  if (& Test-Remote -machine $machine -command $runtimeCheck) {
+    Doctor-Ok "Runtime available"
+  } else {
+    $ready = Doctor-Fail "Runtime not found" "Clone/sync Lintendo to the configured runtime path, or update the machine config."
+  }
+
+  Write-Host ""
+  if ($ready) {
+    Write-Host ("{0} Machine is ready for Lintendo" -f (Ok-Mark))
+    return 0
+  }
+
+  Write-Host ("{0} Machine is not ready for Lintendo" -f (Fail-Mark))
+  return 1
 }
 
 function Remote-Runtime($command, $argv) {
@@ -231,6 +412,7 @@ try {
         "list" { Machine-List }
         "remove" { Machine-Remove $rest }
         "check" { Machine-Check $rest }
+        "doctor" { exit (Machine-Doctor $rest) }
         default { throw "Unknown machine subcommand: $($args[1])" }
       }
     }

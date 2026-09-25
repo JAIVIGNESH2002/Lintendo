@@ -58,6 +58,7 @@ Remote Play V0 from Windows uses OpenSSH to invoke an existing Linux runtime:
 ```powershell
 .\lintendo.cmd machine add phoenix --runtime-path /home/jv/Lintendo
 .\lintendo.cmd machine check phoenix
+.\lintendo.cmd machine doctor phoenix
 .\lintendo.cmd play linux/silent-service --machine phoenix
 .\lintendo.cmd play linux/silent-service --verbose --machine phoenix
 .\lintendo.cmd status --machine phoenix

@@ -143,6 +143,12 @@ if grep -q './lintendo run' README.md tests/integration/*.sh lintendo; then
   exit 1
 fi
 grep -q -- '--verbose' lintendo
+grep -q 'machine doctor' controller/lintendo.ps1
+grep -q 'Ssh-Executable' controller/lintendo.ps1
+grep -q 'Incus daemon access' controller/lintendo.ps1
+grep -q 'Storage available' controller/lintendo.ps1
+grep -q 'Networking available' controller/lintendo.ps1
+grep -q 'Runtime available' controller/lintendo.ps1
 
 if grep -Eq 'search|leaderboard|registry|account|frontend|database' runtime/lib/*.sh lintendo; then
   printf 'unexpected future-scope term found in runtime\n' >&2
